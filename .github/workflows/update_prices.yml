@@ -1,0 +1,31 @@
+name: Fast Market Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch Silver
+        run: |
+          # Fetching Silver from Ardent Insight
+          curl --retry 3 -sL "https://api.ardent-insight.com/v1/commodity/silver/buy" -o silver_buy.json
+          curl --retry 3 -sL "https://api.ardent-insight.com/v1/commodity/silver/sell" -o silver_sell.json
+          echo "{\"last_update\": \"$(date -u)\"}" > status.json
+
+      - name: Commit Data
+        run: |
+          git config --global user.name "COVAS-Bot"
+          git config --global user.email "bot@github.com"
+          git add silver_buy.json silver_sell.json status.json
+          git commit -m "Market Sync Complete" || exit 0
+          git push
